@@ -1,0 +1,37 @@
+# Configuração central do projeto. Caminhos relativos à raiz do repositório.
+paths:
+  raw_csv: data/raw/PS_20174392719_1491204439457_log.csv
+  parquet: data/interim/paysim.parquet
+  processed_dir: data/processed
+  models_dir: models
+  reports_dir: reports
+
+data:
+  target: isFraud
+  drop_columns: [nameOrig, nameDest, isFlaggedFraud]   # isFlaggedFraud = regra do simulador
+  sample_frac_dev: 0.15      # amostra p/ desenvolvimento (mantém TODAS as fraudes)
+
+split:
+  # "por_linhas" (decisão do projeto): cortes por fração do nº de transações, em fronteiras de step.
+  # "por_steps": cortes por fração do intervalo de steps (1..743).
+  mode: por_linhas
+  train_end: 0.60
+  val_end: 0.80
+
+features:
+  # Cenários A-D (ver src/fraud/features.py)
+  variants: [com_saldos, sem_saldos_pos, sem_esvaziamento, sem_esvaziamento_sem_tempo]
+
+train:
+  # Fração de transações legítimas usada no treino (todas as fraudes sempre entram).
+  # 0.20 = rodada rápida de desenvolvimento; 1.0 = rodada final com a base completa.
+  legit_frac: 0.20
+
+costs:
+  # Premissas editáveis (também ajustáveis no painel). Moeda: R$
+  investigation_cost: 50.0       # custo por caso encaminhado à investigação
+  authentication_cost: 2.0       # atrito/custo por autenticação adicional
+  investigation_catch_rate: 0.95 # fração de fraudes barradas na investigação
+  authentication_catch_rate: 0.70 # fração de fraudes barradas na autenticação adicional
+
+seed: 42

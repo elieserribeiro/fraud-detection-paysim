@@ -1,0 +1,68 @@
+[
+  {
+    "titulo": "Fraude clássica",
+    "descricao": "Transferência que esvazia a conta de origem: o padrão mais comum do PaySim.",
+    "step": 583,
+    "type": "TRANSFER",
+    "amount": 459378.91,
+    "oldbalanceOrg": 459378.91,
+    "oldbalanceDest": 0.0,
+    "eh_fraude": true,
+    "score": 1.0
+  },
+  {
+    "titulo": "Fraude de alto valor",
+    "descricao": "A maior fraude da amostra: o tipo de caso em que mais dinheiro está em jogo.",
+    "step": 741,
+    "type": "TRANSFER",
+    "amount": 10000000.0,
+    "oldbalanceOrg": 15674547.89,
+    "oldbalanceDest": 0.0,
+    "eh_fraude": true,
+    "score": 0.9999992847442627
+  },
+  {
+    "titulo": "Fraude difícil",
+    "descricao": "A fraude com o menor score do modelo: mostra o limite da detecção.",
+    "step": 646,
+    "type": "TRANSFER",
+    "amount": 399045.08,
+    "oldbalanceOrg": 10399045.08,
+    "oldbalanceDest": 0.0,
+    "eh_fraude": true,
+    "score": 0.009852372109889984
+  },
+  {
+    "titulo": "Pagamento comum",
+    "descricao": "Compra típica, sem sinal de risco.",
+    "step": 687,
+    "type": "PAYMENT",
+    "amount": 10251.6,
+    "oldbalanceOrg": 0.0,
+    "oldbalanceDest": 0.0,
+    "eh_fraude": false,
+    "score": 1.6541486047572107e-07
+  },
+  {
+    "titulo": "Transferência grande",
+    "descricao": "Valor alto, mas o modelo reconhece como normal.",
+    "step": 596,
+    "type": "TRANSFER",
+    "amount": 12538691.51,
+    "oldbalanceOrg": 0.0,
+    "oldbalanceDest": 49850656.05,
+    "eh_fraude": false,
+    "score": 3.6564108540915186e-07
+  },
+  {
+    "titulo": "Falso alarme",
+    "descricao": "A transação legítima com o maior score: mostra um erro do modelo.",
+    "step": 400,
+    "type": "CASH_OUT",
+    "amount": 13447.65,
+    "oldbalanceOrg": 108575.0,
+    "oldbalanceDest": 402809.91,
+    "eh_fraude": false,
+    "score": 0.0006882597226649523
+  }
+]

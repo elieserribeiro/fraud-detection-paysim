@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+.venv/
+.ipynb_checkpoints/
+.pytest_cache/
+*.egg-info/
+
+# Dados e artefatos pesados (ficam no Google Drive)
+data/raw/*
+data/interim/*
+data/processed/*
+models/*
+!**/.gitkeep
+
+# Scores grandes gerados no Colab (ficam no Drive)
+reports/scores/

@@ -1,0 +1,71 @@
+{
+  "modelo": "xgboost",
+  "premissas": {
+    "investigation_catch_rate": 0.95,
+    "authentication_catch_rate": 0.7,
+    "taxa_fraude_real": 0.001291
+  },
+  "observacao": "null = nível nunca usado. Cortes escolhidos na validação; scores do XGBoost do notebook 04.",
+  "thresholds": {
+    "B": {
+      "inv50_auth2": {
+        "t_auth": 0.999636173248291,
+        "t_inv": 0.999636173248291,
+        "custo_investigacao": 50,
+        "custo_autenticacao": 2,
+        "padrao": true
+      },
+      "inv500_auth20": {
+        "t_auth": 0.999636173248291,
+        "t_inv": 0.999636173248291,
+        "custo_investigacao": 500,
+        "custo_autenticacao": 20,
+        "padrao": false
+      },
+      "inv5000_auth200": {
+        "t_auth": 0.999636173248291,
+        "t_inv": 0.999636173248291,
+        "custo_investigacao": 5000,
+        "custo_autenticacao": 200,
+        "padrao": false
+      },
+      "inv50000_auth2000": {
+        "t_auth": 0.999636173248291,
+        "t_inv": 0.9996778964996338,
+        "custo_investigacao": 50000,
+        "custo_autenticacao": 2000,
+        "padrao": false
+      }
+    },
+    "C": {
+      "inv50_auth2": {
+        "t_auth": 0.0020911251194775105,
+        "t_inv": 0.07768221944570541,
+        "custo_investigacao": 50,
+        "custo_autenticacao": 2,
+        "padrao": true
+      },
+      "inv500_auth20": {
+        "t_auth": 0.011143829673528671,
+        "t_inv": 0.3663167953491211,
+        "custo_investigacao": 500,
+        "custo_autenticacao": 20,
+        "padrao": false
+      },
+      "inv5000_auth200": {
+        "t_auth": 0.07768221944570541,
+        "t_inv": 0.9098663926124573,
+        "custo_investigacao": 5000,
+        "custo_autenticacao": 200,
+        "padrao": false
+      },
+      "inv50000_auth2000": {
+        "t_auth": 0.3663167953491211,
+        "t_inv": 0.9959592223167419,
+        "custo_investigacao": 50000,
+        "custo_autenticacao": 2000,
+        "padrao": false
+      }
+    }
+  }
+}

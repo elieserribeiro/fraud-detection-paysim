@@ -1,0 +1,10 @@
+{
+  "n_teste": 1248736,
+  "n_fraudes_teste": 4250,
+  "n_legitimas_teste": 1244486,
+  "n_amostra": 34250,
+  "valor_fraudado_teste": 6682881544.5,
+  "taxa_fraude_teste": 0.0034034415601055788,
+  "taxa_fraude_real": 0.001291,
+  "peso_legitima_taxa_real": 2.64187117300916
+}
