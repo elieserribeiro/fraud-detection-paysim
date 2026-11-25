@@ -21,8 +21,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from fraud.features import build_features  # noqa: E402
-from fraud.scoring import VARIANT, contributions, load_model, load_thresholds, score_transactions, top_reasons  # noqa: E402
-from fraud.thresholds import LEVELS, decision_levels  # noqa: E402
+from fraud.scoring import (RULE_LABEL, VARIANT, contributions, decide, load_model, load_thresholds,  # noqa: E402
+                           score_transactions, top_reasons)
 
 
 def data_dir() -> Path:
@@ -55,6 +55,7 @@ class Motivo(BaseModel):
 class Resultado(BaseModel):
     score: float = Field(description="Probabilidade estimada de fraude (0 a 1)")
     nivel: Literal["aprovar", "autenticar", "investigar"]
+    regra: str | None = Field(default=None, description="Preenchido quando a decisão veio de uma regra, não do modelo")
     motivos: list[Motivo]
 
 
@@ -66,7 +67,7 @@ def _avaliar(itens: list[Transacao], com_motivos: bool) -> list[Resultado]:
     model, t_auth, t_inv = bundle()
     df = pd.DataFrame([i.model_dump() for i in itens])
     s = score_transactions(model, df)
-    niveis = decision_levels(s, t_auth, t_inv)
+    niveis, regra = decide(s, df, t_auth, t_inv)
     motivos = [[] for _ in itens]
     if com_motivos:
         contrib = contributions(model, df)
@@ -74,7 +75,8 @@ def _avaliar(itens: list[Transacao], com_motivos: bool) -> list[Resultado]:
         motivos = [[Motivo(atributo=a, contribuicao=round(float(c), 4))
                     for a, c in top_reasons(contrib.iloc[k], X.iloc[k], k=5)[["atributo", "contribuicao"]].values]
                    for k in range(len(df))]
-    return [Resultado(score=float(s[k]), nivel=LEVELS[int(niveis[k])], motivos=motivos[k]) for k in range(len(df))]
+    return [Resultado(score=float(s[k]), nivel=niveis[k], regra=RULE_LABEL if regra[k] else None, motivos=motivos[k])
+            for k in range(len(df))]
 
 
 @app.get("/health")

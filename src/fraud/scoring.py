@@ -18,6 +18,10 @@ from .thresholds import LEVELS, decision_levels
 VARIANT = "sem_saldos_pos"
 REQUIRED_COLUMNS = ["step", "type", "amount", "oldbalanceOrg", "oldbalanceDest"]
 
+# Maiores valores do PaySim completo (6,36 mi de transações). Acima disso o modelo não tem referência.
+PAYSIM_MAX = {"amount": 92_445_516.64, "oldbalanceOrg": 59_585_040.37, "oldbalanceDest": 356_015_889.35}
+RULE_LABEL = "regra de precaução: valores fora da faixa conhecida pelo modelo"
+
 FEATURE_LABELS = {
     "type_CASH_IN": "Tipo: depósito (CASH_IN)",
     "type_CASH_OUT": "Tipo: saque (CASH_OUT)",
@@ -87,3 +91,19 @@ def level_names(score, t_auth, t_inv) -> list[str]:
 def logit(p, clip: float = 12.0):
     p = np.clip(np.asarray(p, dtype="float64"), 1e-12, 1 - 1e-12)
     return np.clip(np.log(p / (1 - p)), -clip, clip)
+
+
+def out_of_range(df: pd.DataFrame) -> np.ndarray:
+    """True quando algum valor passa do máximo visto no PaySim (o score do modelo não é confiável)."""
+    mask = np.zeros(len(df), dtype=bool)
+    for col, lim in PAYSIM_MAX.items():
+        mask |= df[col].astype("float64").values > lim
+    return mask
+
+
+def decide(score, df: pd.DataFrame, t_auth, t_inv) -> tuple[list[str], np.ndarray]:
+    """Nível final: regra de precaução (fora da faixa -> investigar) e, no resto, os cortes do modelo."""
+    lv = decision_levels(score, t_auth, t_inv)
+    rule = out_of_range(df)
+    lv = np.where(rule, 2, lv)
+    return [LEVELS[i] for i in lv], rule

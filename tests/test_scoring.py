@@ -4,7 +4,8 @@ import pytest
 import xgboost as xgb
 
 from fraud.features import build_features
-from fraud.scoring import (contributions, level_names, load_model, logit, score_transactions, top_reasons)
+from fraud.scoring import (PAYSIM_MAX, contributions, decide, level_names, load_model, logit, score_transactions,
+                           top_reasons)
 
 
 def _toy(n=3000, seed=0):
@@ -61,3 +62,11 @@ def test_missing_column_error(model):
 def test_level_names_and_logit():
     assert level_names(np.array([0.1, 0.6, 0.99]), 0.5, 0.9) == ["aprovar", "autenticar", "investigar"]
     assert logit(0.5) == pytest.approx(0.0) and logit(0.0) == -12.0
+
+
+def test_precaution_rule_overrides_model(model):
+    m, df, _ = model
+    row = df.head(2).copy()
+    row.loc[row.index[0], "amount"] = PAYSIM_MAX["amount"] * 10
+    niveis, regra = decide(np.array([0.0, 0.0]), row, 0.5, 0.9)
+    assert niveis == ["investigar", "aprovar"] and regra.tolist() == [True, False]

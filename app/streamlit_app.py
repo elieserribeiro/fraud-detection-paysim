@@ -19,8 +19,8 @@ DATA = ROOT / "data"
 sys.path.insert(0, str(ROOT.parent / "src"))
 
 from fraud.features import build_features  # noqa: E402
-from fraud.scoring import (REQUIRED_COLUMNS, VARIANT, contributions, load_model, logit,  # noqa: E402
-                           score_transactions, top_reasons)
+from fraud.scoring import (PAYSIM_MAX, REQUIRED_COLUMNS, VARIANT, contributions, decide, load_model,  # noqa: E402
+                           logit, score_transactions, top_reasons)
 from fraud.thresholds import LEVELS, decision_levels, evaluate_levels, optimize_levels  # noqa: E402
 
 st.set_page_config(page_title="Antifraude PaySim", page_icon="🛡️", layout="wide")
@@ -218,7 +218,7 @@ def fmt_valor(chave, v):
     if chave.startswith("type_") or chave in ("orig_balance_zero", "dest_balance_zero", "amount_equals_old_org"):
         return "sim" if v >= 0.5 else "não"
     if chave == "amount_to_old_org":
-        return f"{num(v, 2)}×"
+        return "mais de 1.000×" if v > 1000 else f"{num(v, 2)}×"
     return num(v)
 
 
@@ -287,6 +287,9 @@ with tab_tx:
         ss.f_amount = float(ss.f_old_org)
         ss.f_example = None
 
+    def clear_example():
+        ss.f_example = None
+
     st.markdown("**1. Escolha um exemplo pronto** (ou edite os campos abaixo)")
     for rotulo, eh_fraude in [("🔴 Fraudes", True), ("🟢 Legítimas", False)]:
         idx = [i for i, e in enumerate(D["exemplos"]) if e["eh_fraude"] == eh_fraude]
@@ -302,13 +305,16 @@ with tab_tx:
         st.markdown("**2. Dados da transação**")
         st.selectbox("Tipo", ["TRANSFER", "CASH_OUT", "PAYMENT", "CASH_IN", "DEBIT"], key="f_type",
                      format_func=lambda x: {"TRANSFER": "Transferência", "CASH_OUT": "Saque", "PAYMENT": "Pagamento",
-                                            "CASH_IN": "Depósito", "DEBIT": "Débito"}[x])
-        st.number_input("Valor (R$)", min_value=0.0, step=1000.0, format="%.2f", key="f_amount")
-        st.number_input("Saldo da conta de origem (R$)", min_value=0.0, step=1000.0, format="%.2f", key="f_old_org")
-        st.number_input("Saldo da conta de destino (R$)", min_value=0.0, step=1000.0, format="%.2f", key="f_old_dest")
+                                            "CASH_IN": "Depósito", "DEBIT": "Débito"}[x], on_change=clear_example)
+        st.number_input("Valor (R$)", min_value=0.0, step=1000.0, format="%.2f", key="f_amount",
+                        on_change=clear_example)
+        st.number_input("Saldo da conta de origem (R$)", min_value=0.0, step=1000.0, format="%.2f", key="f_old_org",
+                        on_change=clear_example)
+        st.number_input("Saldo da conta de destino (R$)", min_value=0.0, step=1000.0, format="%.2f", key="f_old_dest",
+                        on_change=clear_example)
         d1, d2 = st.columns(2)
-        d1.slider("Dia", 0, 30, key="f_day")
-        d2.slider("Hora", 0, 23, key="f_hour")
+        d1.slider("Dia", 0, 30, key="f_day", on_change=clear_example)
+        d2.slider("Hora", 0, 23, key="f_hour", on_change=clear_example)
         st.button("💥 Esvaziar a conta (valor = saldo)", on_click=drain_account, width="stretch",
                   help="Veja o principal sinal de fraude do PaySim: transferir o saldo inteiro.")
 
@@ -316,16 +322,31 @@ with tab_tx:
                          "oldbalanceOrg": ss.f_old_org, "oldbalanceDest": ss.f_old_dest}])
     s = float(score_transactions(model, row)[0])
     ta_b, ti_b = POL["B"]
-    nivel = LEVELS[int(decision_levels([s], ta_b, ti_b)[0])]
+    niveis_, regra_ = decide([s], row, ta_b, ti_b)
+    nivel, por_regra = niveis_[0], bool(regra_[0])
     X = build_features(row, VARIANT)
     reasons = top_reasons(contributions(model, row).iloc[0], X.iloc[0], k=6)
 
+    avisos = []
+    fora = [nome for chave, nome, v in [("amount", "valor", ss.f_amount), ("oldbalanceOrg", "saldo de origem", ss.f_old_org),
+                                        ("oldbalanceDest", "saldo de destino", ss.f_old_dest)] if v > PAYSIM_MAX[chave]]
+    if fora:
+        avisos.append(f"**Fora da faixa dos dados** ({', '.join(fora)}). A maior transação do PaySim tem "
+                      f"{brl(PAYSIM_MAX['amount'])}. Acima disso o modelo não tem referência, então a **regra de precaução** "
+                      "manda para investigação, independentemente do score.")
+    if ss.f_type != "CASH_IN" and ss.f_amount > ss.f_old_org + 0.005:
+        avisos.append("**Valor maior que o saldo de origem.** Num banco real, uma regra de saldo barraria essa transação "
+                      "antes do modelo. No PaySim isso aparece em muitas transações legítimas (contas com saldo zerado, um "
+                      "artefato do simulador), por isso o modelo tende a aprovar.")
+
     with result:
         st.markdown("**3. Decisão do modelo**")
+        for a_ in avisos:
+            st.warning(a_, icon="⚠️")
         st.markdown(
             f"""<div style="background:{COLORS[nivel]};color:white;border-radius:10px;padding:14px 18px;">
-            <div style="font-size:1.6rem;font-weight:800">{ICONES[nivel]} {NOMES[nivel]}</div>
-            <div style="opacity:.95">Risco de fraude: <b>{prob_txt(s)}</b> · {DESC[nivel]}</div></div>""",
+            <div style="font-size:1.6rem;font-weight:800">{ICONES[nivel]} {NOMES[nivel]}{" (por regra)" if por_regra else ""}</div>
+            <div style="opacity:.95">{"Decisão da regra de precaução. Score do modelo: " if por_regra else "Risco de fraude: "}<b>{prob_txt(s)}</b> · {DESC[nivel]}</div></div>""",
             unsafe_allow_html=True)
         st.plotly_chart(risk_meter(s, ta_b, ti_b), width="stretch", config={"displayModeBar": False})
         ex = ss.f_example
@@ -436,15 +457,17 @@ with tab_lote:
             lote = lote.copy()
             lote["score"] = score_transactions(model, lote)
             ta_b, ti_b = POL["B"]
-            lote["nivel"] = [NOMES[LEVELS[i]] for i in decision_levels(lote["score"].values, ta_b, ti_b)]
-            cont = lote["nivel"].value_counts().reindex([NOMES[n] for n in LEVELS], fill_value=0)
+            niv_, regra_ = decide(lote["score"].values, lote, ta_b, ti_b)
+            lote["nivel"] = [NOMES[n] + (" (regra)" if r else "") for n, r in zip(niv_, regra_)]
+            cont = lote["nivel"].str.replace(" (regra)", "", regex=False).value_counts().reindex(
+                [NOMES[n] for n in LEVELS], fill_value=0)
             m1, m2, m3, m4 = st.columns(4)
             m1.metric("Transações", num(len(lote)))
             for mm, n in zip((m2, m3, m4), LEVELS):
                 mm.metric(f"{ICONES[n]} {NOMES[n]}", num(int(cont[NOMES[n]])))
             if "isFraud" in lote.columns:
                 f = lote[lote["isFraud"] == 1]
-                st.success(f"Das {num(len(f))} fraudes do arquivo, {num(int((f['nivel'] != 'Aprovar').sum()))} "
+                st.success(f"Das {num(len(f))} fraudes do arquivo, {num(int((~f['nivel'].str.startswith('Aprovar')).sum()))} "
                            f"caíram em autenticação ou investigação.")
             vis = lote.sort_values("score", ascending=False).head(500).copy()
             vis["score"] = vis["score"].map(prob_txt)
@@ -527,6 +550,7 @@ e taxa de falsos positivos; cortes de risco escolhidos pelo **menor custo espera
 - **Sem histórico do cliente.** O PaySim não traz comportamento anterior de cada conta, o que ajudaria muito na vida real.
 - **Custos e taxas de captura são premissas**, não dados reais (investigação R$ 50 / 95%, autenticação R$ 2 / 70%).
 - **Modelos de anomalia fracos** nos cenários difíceis; ficam como comparação, não como parte da decisão.
+- **Fora da faixa dos dados** (valores acima do máximo do PaySim, ~R$ 92 mi), o modelo não tem referência: uma regra de precaução manda essas transações para investigação.
 - **Projeto de portfólio**, sem intenção de uso em produção.
 
 ### Como os números são recompostos

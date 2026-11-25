@@ -50,3 +50,9 @@ def test_batch_and_validation(client):
     assert r.status_code == 200 and len(r.json()) == 3
     bad = client.post("/score", json={"step": 1, "type": "PIX", "amount": 1.0, "oldbalanceOrg": 0.0, "oldbalanceDest": 0.0})
     assert bad.status_code == 422
+
+
+def test_out_of_range_goes_to_investigation_by_rule(client):
+    r = client.post("/score", json={"step": 50, "type": "TRANSFER", "amount": 2e11, "oldbalanceOrg": 0.0,
+                                    "oldbalanceDest": 0.0}).json()
+    assert r["nivel"] == "investigar" and r["regra"]
