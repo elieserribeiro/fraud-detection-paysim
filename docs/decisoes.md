@@ -83,5 +83,5 @@ Cortes salvos em `models/final/thresholds.json` (`null` = nível nunca usado).
 4. **Modelos de anomalia** — concluída
 5. **Comparação final no teste, ensemble e impacto financeiro** — concluída (notebook 04)
 6. **Thresholds por custo esperado** — concluída (notebook 05)
-7. Scoring + API e painel Streamlit — em andamento (notebook 06, `app/`, `api/`)
-8. Documentação técnica
+7. **Scoring + API e painel Streamlit** — concluída: https://antifraude-paysim.streamlit.app · código em https://github.com/elieserribeiro/fraud-detection-paysim
+8. **Documentação técnica** — README de portfólio e `docs/relatorio_tecnico.md`
